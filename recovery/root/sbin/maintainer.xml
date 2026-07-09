@@ -61,7 +61,7 @@
 			<action>
 				<action function="mount">/data</action>
 				<action function="cmd">
-D="$(date +%Y%m%d)";
+D="$(date +%%Y%%m%%d)";
 O="/sdcard";
 if [ "%mnt_backup_target%" = "a" ] || [ "%mnt_backup_target%" = "ab" ]; then
 dd if=/dev/block/bootdevice/by-name/boot_a bs=4M | zstd -T0 -3 -c > "$O/boot_a_${D}.img.zst";
@@ -120,11 +120,10 @@ fi
 				<text>Select backup file</text>
 			</text>
 
-			<button style="btn_raised">
-				<placement x="%center_x%" y="%row_btn2_y%" placement="4"/>
-				<text>Continue</text>
+			<action>
+				<condition var1="restore_zst_filename" op="modified"/>
 				<action function="page">maintainer_restore_confirm</action>
-			</button>
+			</action>
 
 			<action>
 				<touch key="back"/>
@@ -148,7 +147,12 @@ fi
 
 			<text style="text_body2_hl">
 				<placement x="%gl_text_x%" y="%row2_1_y%"/>
-				<text>This will OVERWRITE the boot partition matching this filename. This cannot be undone.</text>
+				<text>This will OVERWRITE the boot partition</text>
+			</text>
+
+			<text style="text_body2_hl">
+				<placement x="%gl_text_x%" y="%row2_2_y%"/>
+				<text>matching this filename. This cannot be undone.</text>
 			</text>
 
 			<text style="caption">
@@ -210,7 +214,7 @@ zstd -d -c "$F" | dd of="$DEV" bs=4M
 
 		<!-- Общий экран результата -->
 		<page name="maintainer_result">
-			<template name="base"/>
+			<template name="base_done"/>
 
 			<text style="text_ab_title">
 				<placement x="%col1_x_indent%" y="%ab_bc_y%"/>
@@ -218,10 +222,22 @@ zstd -d -c "$F" | dd of="$DEV" bs=4M
 			</text>
 
 			<button style="btn_raised">
-				<placement x="%center_x%" y="%row_btn2_y%" placement="4"/>
+				<placement x="%btn_raised_left_x%" y="%row_btn1_y%"/>
 				<text>OK</text>
 				<action function="page">maintainer</action>
 			</button>
+
+			<template name="gestures"/>
+
+			<action>
+				<touch key="home"/>
+				<action function="page">main</action>
+			</action>
+
+			<action>
+				<touch key="back"/>
+				<action function="page">maintainer</action>
+			</action>
 		</page>
 
 	</pages>
