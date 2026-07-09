@@ -58,11 +58,14 @@
 				<text>Backing up boot partition(s)...</text>
 			</text>
 
+			<template name="progress_bar"/>
+
 			<action>
 				<action function="mount">/data</action>
 				<action function="cmd">
-D="$(date +%%Y%%m%%d)";
-O="/sdcard";
+D="$(date +%%Y%%m%%d_%%H%%M%%S)";
+O="/sdcard/test_backup";
+mkdir -p "$O";
 if [ "%mnt_backup_target%" = "a" ] || [ "%mnt_backup_target%" = "ab" ]; then
 dd if=/dev/block/bootdevice/by-name/boot_a bs=4M | zstd -T0 -3 -c > "$O/boot_a_${D}.img.zst";
 par2turbo create -n3 "$O/boot_a_${D}.img.zst.par2" "$O/boot_a_${D}.img.zst";
@@ -97,7 +100,7 @@ fi
 				<sort name="tw_gui_sort_order"/>
 				<icon folder="folder_icon" file="file_icon" />
 				<filter extn=".zst" folders="1" files="1"/>
-				<path name="restore_zst_path" default="/sdcard"/>
+				<path name="restore_zst_path" default="/sdcard/test_backup"/>
 				<data name="restore_zst_filename"/>
 				<selection name="restore_zst_file"/>
 			</fileselector>
@@ -108,7 +111,7 @@ fi
 				<sort name="tw_gui_sort_order"/>
 				<icon folder="folder_icon_small" file="file_icon_small" />
 				<filter extn=".zst" folders="1" files="1"/>
-				<path name="restore_zst_path" default="/sdcard"/>
+				<path name="restore_zst_path" default="/sdcard/test_backup"/>
 				<data name="restore_zst_filename"/>
 				<selection name="restore_zst_file"/>
 			</fileselector>
@@ -180,6 +183,8 @@ fi
 				<condition var1="tw_busy" var2="1"/>
 				<text>Restoring boot partition...</text>
 			</text>
+
+			<template name="progress_bar"/>
 
 			<action>
 				<action function="mount">/data</action>
