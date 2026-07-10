@@ -8,22 +8,19 @@
 				<placement x="0" y="%ab_h%" w="%screen_w%" h="%bl_fullscreen_h%"/>
 				<icon selected="build" unselected="build" />
 
-				<listitem name="Backup boot A+B">
-					<action function="set">mnt_backup_target=ab</action>
-					<action function="page">maintainer_backup_run</action>
+				<listitem name="Backup super — zstd">
+					<action function="set">mnt_backup_method=zstd</action>
+					<action function="set">of_show_storage_selection=0</action>
+					<action function="page">maintainer_backup_prep</action>
 				</listitem>
 
-				<listitem name="Backup boot A only">
-					<action function="set">mnt_backup_target=a</action>
-					<action function="page">maintainer_backup_run</action>
+				<listitem name="Backup super — zstd+par2">
+					<action function="set">mnt_backup_method=zstdpar2</action>
+					<action function="set">of_show_storage_selection=0</action>
+					<action function="page">maintainer_backup_prep</action>
 				</listitem>
 
-				<listitem name="Backup boot B only">
-					<action function="set">mnt_backup_target=b</action>
-					<action function="page">maintainer_backup_run</action>
-				</listitem>
-
-				<listitem name="Restore boot (choose file)">
+				<listitem name="Restore super (choose file)">
 					<action function="page">maintainer_restore_pick</action>
 				</listitem>
 			</listbox>
@@ -48,14 +45,93 @@
 			</action>
 		</page>
 
-		<!-- Busy-страница: реально выполняет backup -->
+		<!-- Подготовка бекапа: метод уже выбран, тут только storage + confirm -->
+		<page name="maintainer_backup_prep">
+			<template name="base"/>
+
+			<text style="text_ab_title">
+				<placement x="%col1_x_indent%" y="%ab_bc_y%"/>
+				<text>Backup super</text>
+			</text>
+
+			<text style="text_body1">
+				<placement x="%gl_text_x%" y="%row1_1_y%"/>
+				<text>Method: %mnt_backup_method%</text>
+			</text>
+
+			<text style="text_ab_title">
+				<placement x="%col1_x%" y="%row1_2_y%" placement="2"/>
+				<text>%tw_storage_display_name%</text>
+			</text>
+
+			<text style="text_ab_subtitle">
+				<placement x="%col1_x%" y="%row1_2_y%"/>
+				<text>{@part_free}: %tw_storage_free_size%{@mbyte}</text>
+			</text>
+
+			<button style="actionbar">
+				<condition var1="of_show_storage_selection" var2="1"/>
+				<placement x="%ab_btn2_x%" y="%ab_y%" placement="4"/>
+				<action function="set">of_show_storage_selection=0</action>
+			</button>
+
+			<button style="actionbar">
+				<condition var1="of_show_storage_selection" op="!=" var2="1"/>
+				<placement x="%ab_btn2_x%" y="%ab_y%" placement="4"/>
+				<action function="set">of_show_storage_selection=1</action>
+			</button>
+
+			<image>
+				<placement x="%ab_btn2_x%" y="%ab_y%" placement="4"/>
+				<image resource="actionbar_storage"/>
+			</image>
+
+			<text style="caption">
+				<placement x="%center_x%" y="%slider_text_y%" placement="5"/>
+				<text>{@swipe_backup}</text>
+			</text>
+
+			<slider style="slider_action">
+				<placement x="%center_x%" y="%slider_y%" placement="5"/>
+				<action function="page">maintainer_backup_run</action>
+			</slider>
+
+			<button>
+				<condition var1="of_show_storage_selection" var2="1"/>
+				<fill color="%darktransparent%"/>
+				<placement x="0" y="%ab_h%" w="%screen_w%" h="%screen_h%"/>
+				<action function="set">of_show_storage_selection=0</action>
+			</button>
+
+			<template name="storage_dialog"/>
+
+			<template name="gestures"/>
+
+			<action>
+				<condition var1="tw_storage_path" op="modified"/>
+				<action function="set">of_show_storage_selection=0</action>
+				<action function="page">maintainer_backup_prep</action>
+			</action>
+
+			<action>
+				<touch key="home"/>
+				<action function="page">main</action>
+			</action>
+
+			<action>
+				<touch key="back"/>
+				<action function="page">maintainer</action>
+			</action>
+		</page>
+
+		<!-- Busy-страница: проверка места + реальный backup -->
 		<page name="maintainer_backup_run">
 			<template name="dialog_body"/>
 
 			<text style="text_status">
 				<placement x="%center_x%" y="%center_y%" placement="5"/>
 				<condition var1="tw_busy" var2="1"/>
-				<text>Backing up boot partition(s)...</text>
+				<text>Backing up super...</text>
 			</text>
 
 			<template name="progress_bar"/>
@@ -63,16 +139,24 @@
 			<action>
 				<action function="mount">/data</action>
 				<action function="cmd">
-D="$(date +%%Y%%m%%d_%%H%%M%%S)";
-O="/sdcard/test_backup";
+O="%tw_storage_path%/Maintainer_backup";
 mkdir -p "$O";
-if [ "%mnt_backup_target%" = "a" ] || [ "%mnt_backup_target%" = "ab" ]; then
-dd if=/dev/block/bootdevice/by-name/boot_a bs=4M | zstd -T0 -3 -c > "$O/boot_a_${D}.img.zst";
-par2turbo create -n3 "$O/boot_a_${D}.img.zst.par2" "$O/boot_a_${D}.img.zst";
+
+PART_BYTES="$(blockdev --getsize64 /dev/block/bootdevice/by-name/super 2>/dev/null)";
+FREE_BYTES="$(df -P "$O" 2>/dev/null | tail -n1 | awk '{print $4 * 512}')";
+if [ -n "$PART_BYTES" ] && [ -n "$FREE_BYTES" ]; then
+  if [ "$FREE_BYTES" -lt "$PART_BYTES" ]; then
+    echo "Not enough free space: need ~$PART_BYTES bytes, have $FREE_BYTES bytes";
+    exit 1;
+  fi
 fi;
-if [ "%mnt_backup_target%" = "b" ] || [ "%mnt_backup_target%" = "ab" ]; then
-dd if=/dev/block/bootdevice/by-name/boot_b bs=4M | zstd -T0 -3 -c > "$O/boot_b_${D}.img.zst";
-par2turbo create -n3 "$O/boot_b_${D}.img.zst.par2" "$O/boot_b_${D}.img.zst";
+
+D="$(date +%%Y-%%m-%%d_%%H-%%M-%%S)";
+F="$O/super_${D}.img.zst";
+dd if=/dev/block/bootdevice/by-name/super bs=1M 2>/dev/null | zstd -12 -T8 -c > "$F" || exit 1;
+zstd -t "$F" || exit 1;
+if [ "%mnt_backup_method%" = "zstdpar2" ]; then
+par2turbo c -r10 -n3 "$F.par2" "$F" || exit 1;
 fi
 				</action>
 			</action>
@@ -100,7 +184,7 @@ fi
 				<sort name="tw_gui_sort_order"/>
 				<icon folder="folder_icon" file="file_icon" />
 				<filter extn=".zst" folders="1" files="1"/>
-				<path name="restore_zst_path" default="/sdcard/test_backup"/>
+				<path name="restore_zst_path" default="%tw_storage_path%/Maintainer_backup"/>
 				<data name="restore_zst_filename"/>
 				<selection name="restore_zst_file"/>
 			</fileselector>
@@ -111,7 +195,7 @@ fi
 				<sort name="tw_gui_sort_order"/>
 				<icon folder="folder_icon_small" file="file_icon_small" />
 				<filter extn=".zst" folders="1" files="1"/>
-				<path name="restore_zst_path" default="/sdcard/test_backup"/>
+				<path name="restore_zst_path" default="%tw_storage_path%/Maintainer_backup"/>
 				<data name="restore_zst_filename"/>
 				<selection name="restore_zst_file"/>
 			</fileselector>
@@ -150,12 +234,12 @@ fi
 
 			<text style="text_body2_hl">
 				<placement x="%gl_text_x%" y="%row2_1_y%"/>
-				<text>This will OVERWRITE the boot partition</text>
+				<text>This will OVERWRITE the super partition</text>
 			</text>
 
 			<text style="text_body2_hl">
 				<placement x="%gl_text_x%" y="%row2_2_y%"/>
-				<text>matching this filename. This cannot be undone.</text>
+				<text>This cannot be undone.</text>
 			</text>
 
 			<text style="caption">
@@ -174,14 +258,14 @@ fi
 			</action>
 		</page>
 
-		<!-- Busy-страница: реально выполняет restore -->
+		<!-- Busy-страница: валидация имени + check_and_repair + реальный restore -->
 		<page name="maintainer_restore_run">
 			<template name="dialog_body"/>
 
 			<text style="text_status">
 				<placement x="%center_x%" y="%center_y%" placement="5"/>
 				<condition var1="tw_busy" var2="1"/>
-				<text>Restoring boot partition...</text>
+				<text>Restoring super partition...</text>
 			</text>
 
 			<template name="progress_bar"/>
@@ -190,15 +274,21 @@ fi
 				<action function="mount">/data</action>
 				<action function="cmd">
 F="%restore_zst_filename%";
+
 case "$F" in
-  *boot_a_*) DEV=/dev/block/bootdevice/by-name/boot_a ;;
-  *boot_b_*) DEV=/dev/block/bootdevice/by-name/boot_b ;;
-  *) echo "cannot determine target slot from filename"; exit 1 ;;
+  super_*) : ;;
+  *) echo "Selected file is not a super_ backup, aborting to protect the partition"; exit 1 ;;
 esac;
-if [ -f "${F}.par2" ]; then
-par2turbo verify "${F}.par2" || { echo "par2 verify failed, aborting"; exit 1; };
+
+if zstd -t "$F" 2>/dev/null; then
+:;
+elif [ -f "${F}.par2" ]; then
+par2turbo r "${F}.par2" || { echo "par2 repair failed, aborting"; exit 1; };
+else
+echo "file corrupt and no par2 available, aborting"; exit 1;
 fi;
-zstd -d -c "$F" | dd of="$DEV" bs=4M
+
+zstd -d -c "$F" | dd of=/dev/block/bootdevice/by-name/super bs=1M
 				</action>
 			</action>
 
