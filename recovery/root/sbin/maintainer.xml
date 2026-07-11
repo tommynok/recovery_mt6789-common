@@ -126,7 +126,7 @@ PART_BLOCKS="$(blockdev --getsize /dev/block/bootdevice/by-name/super 2>/dev/nul
 set -- $(df -P "%tw_storage_path%" 2>/dev/null | tail -n1);
 FREE_BLOCKS="$4";
 rm -f /tmp/mnt_lowspace;
-if [ -n "$PART_BLOCKS" ] && [ -n "$FREE_BLOCKS" ]; then
+if [ -n "$PART_BLOCKS" ] &amp;&amp; [ -n "$FREE_BLOCKS" ]; then
 if [ "$FREE_BLOCKS" -lt "$PART_BLOCKS" ]; then
 touch /tmp/mnt_lowspace;
 fi;
