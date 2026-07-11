@@ -145,13 +145,12 @@ DAY="$(date +%%Y-%%m-%%d)";
 O="$BASE/$DAY";
 mkdir -p "$O" || exit 1;
 
-PART_BYTES="$(blockdev --getsize64 /dev/block/bootdevice/by-name/super 2>/dev/null)";
+PART_BLOCKS="$(blockdev --getsize /dev/block/bootdevice/by-name/super 2>/dev/null)";
 set -- $(df -P "$O" 2>/dev/null | tail -n1);
 FREE_BLOCKS="$4";
-if [ -n "$PART_BYTES" ] && [ -n "$FREE_BLOCKS" ]; then
-FREE_BYTES=$(( FREE_BLOCKS * 512 ));
-if [ "$FREE_BYTES" -lt "$PART_BYTES" ]; then
-echo "Not enough free space: need approx $PART_BYTES bytes, have $FREE_BYTES bytes";
+if [ -n "$PART_BLOCKS" ] && [ -n "$FREE_BLOCKS" ]; then
+if [ "$FREE_BLOCKS" -lt "$PART_BLOCKS" ]; then
+echo "Not enough free space: need $PART_BLOCKS blocks (512b), have $FREE_BLOCKS blocks (512b)";
 exit 1;
 fi;
 fi;
