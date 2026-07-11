@@ -307,6 +307,12 @@ else
 echo "file corrupt and no par2 available, aborting"; exit 1;
 fi;
 
+set -- $(du -m "$F");
+FILE_MB="$1";
+if [ "$FILE_MB" -lt 1000 ]; then
+echo "File is only $FILE_MB MB - too small for a super backup, aborting"; exit 1;
+fi;
+
 START="$(date +%%s)";
 zstd -d -c "$F" | dd of=/dev/block/bootdevice/by-name/super bs=1M || exit 1;
 END="$(date +%%s)";
