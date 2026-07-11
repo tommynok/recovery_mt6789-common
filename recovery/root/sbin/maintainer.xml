@@ -149,9 +149,9 @@
 			<template name="progress_bar"/>
 
 			<action>
+				<action function="set">mnt_report=</action>
 				<action function="mount">/data</action>
 				<action function="cmd">
-twrp set mnt_report "";
 BASE="%tw_storage_path%/Partitions_backup";
 D="$(date +%%Y-%%m-%%d_%%H-%%M-%%S)";
 DAY="$(date +%%Y-%%m-%%d)";
@@ -170,7 +170,7 @@ ELAPSED=$(( END - START ));
 set -- $(du -m "$F");
 SIZE_MB="$1";
 echo "Done: size $SIZE_MB MB, time $ELAPSED sec, file $F";
-twrp set mnt_report "Size: $SIZE_MB MB, time: $ELAPSED sec";
+( sleep 5; twrp set mnt_report "Size: $SIZE_MB MB, time: $ELAPSED sec" ) >/dev/null 2>&amp;1 &amp;
 				</action>
 			</action>
 
@@ -284,9 +284,9 @@ twrp set mnt_report "Size: $SIZE_MB MB, time: $ELAPSED sec";
 			<template name="progress_bar"/>
 
 			<action>
+				<action function="set">mnt_report=</action>
 				<action function="mount">/data</action>
 				<action function="cmd">
-twrp set mnt_report "";
 F="%restore_zst_filename%";
 BN="$(basename "$F")";
 
@@ -318,7 +318,7 @@ zstd -d -c "$F" | dd of=/dev/block/bootdevice/by-name/super bs=1M || exit 1;
 END="$(date +%%s)";
 ELAPSED=$(( END - START ));
 echo "Restore done: time $ELAPSED sec, file $F";
-twrp set mnt_report "Restored in $ELAPSED sec";
+( sleep 5; twrp set mnt_report "Restored in $ELAPSED sec" ) >/dev/null 2>&amp;1 &amp;
 				</action>
 			</action>
 
