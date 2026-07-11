@@ -68,8 +68,8 @@
 
 			<text style="text_body1">
 				<condition var1="fileexists" var2="/tmp/mnt_lowspace"/>
-				<placement x="%gl_text_x%" y="%row2_2_y%"/>
-				<text>Note: free space is less than raw partition size — compressed file will likely still fit</text>
+				<placement x="%gl_text_x%" y="%row3_1_y%"/>
+				<text>Warning: less free space than partition size</text>
 			</text>
 
 			<text style="text_body1">
@@ -136,6 +136,17 @@ fi;
 
 			<action>
 				<condition var1="tw_storage_path" op="modified"/>
+				<action function="cmd">
+PART_BLOCKS="$(blockdev --getsize /dev/block/bootdevice/by-name/super 2>/dev/null)";
+set -- $(df -P "%tw_storage_path%" 2>/dev/null | tail -n1);
+FREE_BLOCKS="$4";
+rm -f /tmp/mnt_lowspace;
+if [ -n "$PART_BLOCKS" ] && [ -n "$FREE_BLOCKS" ]; then
+if [ "$FREE_BLOCKS" -lt "$PART_BLOCKS" ]; then
+touch /tmp/mnt_lowspace;
+fi;
+fi;
+				</action>
 				<action function="set">of_show_storage_selection=0</action>
 				<action function="page">maintainer_backup_prep</action>
 			</action>
