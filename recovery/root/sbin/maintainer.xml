@@ -136,17 +136,6 @@ fi;
 
 			<action>
 				<condition var1="tw_storage_path" op="modified"/>
-				<action function="cmd">
-PART_BLOCKS="$(blockdev --getsize /dev/block/bootdevice/by-name/super 2>/dev/null)";
-set -- $(df -P "%tw_storage_path%" 2>/dev/null | tail -n1);
-FREE_BLOCKS="$4";
-rm -f /tmp/mnt_lowspace;
-if [ -n "$PART_BLOCKS" ] && [ -n "$FREE_BLOCKS" ]; then
-if [ "$FREE_BLOCKS" -lt "$PART_BLOCKS" ]; then
-touch /tmp/mnt_lowspace;
-fi;
-fi;
-				</action>
 				<action function="set">of_show_storage_selection=0</action>
 				<action function="page">maintainer_backup_prep</action>
 			</action>
@@ -183,14 +172,14 @@ DAY="$(date +%%Y-%%m-%%d)";
 O="$BASE/$DAY";
 mkdir -p "$O" || exit 1;
 
-START="$(date +%s)";
+START="$(date +%%s)";
 F="$O/super_$D.img.zst";
 dd if=/dev/block/bootdevice/by-name/super bs=1M | zstd -12 -T8 -c > "$F" || exit 1;
 zstd -t "$F" || exit 1;
 if [ "%mnt_backup_method%" = "zstdpar2" ]; then
 par2turbo c -r10 -n3 "$F.par2" "$F" || exit 1;
 fi
-END="$(date +%s)";
+END="$(date +%%s)";
 ELAPSED=$(( END - START ));
 set -- $(du -m "$F");
 SIZE_MB="$1";
