@@ -155,22 +155,32 @@ DAY="$(date +%%Y-%%m-%%d)";
 O="$BASE/$DAY";
 mkdir -p "$O" || exit 1;
 
+PART_BLOCKS="$(blockdev --getsize /dev/block/bootdevice/by-name/super)";
+PART_MB=$(( PART_BLOCKS / 2048 ));
+
 START="$(date +%%s)";
 F="$O/super_$D.img.zst";
-echo "Backing up super to $F";
+echo "Backing up Super to %tw_storage_display_name%/Partitions_backup";
 dd if=/dev/block/bootdevice/by-name/super bs=1M | zstd -12 -T8 -c > "$F" || exit 1;
 echo "Verifying archive...";
-zstd -t "$F" || exit 1;
+zstd -t "$F" >/dev/null 2>&amp;1 || exit 1;
+echo "Archive OK";
 if [ "%mnt_backup_method%" = "zstdpar2" ]; then
 echo "Creating par2 recovery data...";
-par2turbo c -r10 -n3 "$F.par2" "$F" || exit 1;
+par2turbo c -q -r10 -n3 "$F.par2" "$F" || exit 1;
 fi
 END="$(date +%%s)";
 ELAPSED=$(( END - START ));
+if [ "$ELAPSED" -lt 1 ]; then ELAPSED=1; fi;
+MIN=$(( ELAPSED / 60 ));
+SEC=$(( ELAPSED %% 60 ));
 set -- $(du -m "$F");
 SIZE_MB="$1";
-echo "Done: size $SIZE_MB MB, time $ELAPSED sec";
-echo "File: $F";
+READ_SPD=$(( PART_MB / ELAPSED ));
+WRITE_SPD=$(( SIZE_MB / ELAPSED ));
+echo "Done: size $SIZE_MB MB";
+echo "Time: $MIN min $SEC sec, read $READ_SPD MB/s, write $WRITE_SPD MB/s";
+echo "File: super_$D.img.zst";
 				</action>
 			</action>
 
@@ -299,7 +309,7 @@ echo "ERROR: file is only $FILE_MB MB - too small for a super backup, aborting";
 fi;
 
 echo "Checking archive integrity...";
-if zstd -t "$F" 2>/dev/null; then
+if zstd -t "$F" >/dev/null 2>&amp;1; then
 echo "Archive OK";
 elif [ -f "$F.par2" ]; then
 echo "Archive damaged, trying par2 repair...";
@@ -312,12 +322,21 @@ else
 echo "ERROR: file corrupt and no par2 available, aborting"; exit 1;
 fi;
 
-echo "Writing to super partition...";
+PART_BLOCKS="$(blockdev --getsize /dev/block/bootdevice/by-name/super)";
+PART_MB=$(( PART_BLOCKS / 2048 ));
+
+echo "Writing $BN to Super partition...";
 START="$(date +%%s)";
 zstd -d -c "$F" | dd of=/dev/block/bootdevice/by-name/super bs=1M || exit 1;
 END="$(date +%%s)";
 ELAPSED=$(( END - START ));
-echo "Restore done: time $ELAPSED sec";
+if [ "$ELAPSED" -lt 1 ]; then ELAPSED=1; fi;
+MIN=$(( ELAPSED / 60 ));
+SEC=$(( ELAPSED %% 60 ));
+READ_SPD=$(( FILE_MB / ELAPSED ));
+WRITE_SPD=$(( PART_MB / ELAPSED ));
+echo "Restore done";
+echo "Time: $MIN min $SEC sec, read $READ_SPD MB/s, write $WRITE_SPD MB/s";
 				</action>
 			</action>
 
