@@ -55,8 +55,21 @@
 			</text>
 
 			<text style="text_body1">
+				<condition var1="mnt_backup_method" var2="zstd"/>
 				<placement x="%gl_text_x%" y="%row1_1_y%"/>
-				<text>Method: %mnt_backup_method%</text>
+				<text>Method: zstd</text>
+			</text>
+
+			<text style="text_body1">
+				<condition var1="mnt_backup_method" var2="zstdpar2"/>
+				<placement x="%gl_text_x%" y="%row1_1_y%"/>
+				<text>Method: zstd + par2</text>
+			</text>
+
+			<text style="text_body1">
+				<condition var1="fileexists" var2="/tmp/mnt_lowspace"/>
+				<placement x="%gl_text_x%" y="%row2_2_y%"/>
+				<text>Note: free space is less than raw partition size — compressed file will likely still fit</text>
 			</text>
 
 			<text style="text_body1">
@@ -108,6 +121,20 @@
 			<template name="gestures"/>
 
 			<action>
+				<action function="cmd">
+PART_BLOCKS="$(blockdev --getsize /dev/block/bootdevice/by-name/super 2>/dev/null)";
+set -- $(df -P "%tw_storage_path%" 2>/dev/null | tail -n1);
+FREE_BLOCKS="$4";
+rm -f /tmp/mnt_lowspace;
+if [ -n "$PART_BLOCKS" ] && [ -n "$FREE_BLOCKS" ]; then
+if [ "$FREE_BLOCKS" -lt "$PART_BLOCKS" ]; then
+touch /tmp/mnt_lowspace;
+fi;
+fi;
+				</action>
+			</action>
+
+			<action>
 				<condition var1="tw_storage_path" op="modified"/>
 				<action function="set">of_show_storage_selection=0</action>
 				<action function="page">maintainer_backup_prep</action>
@@ -145,22 +172,18 @@ DAY="$(date +%%Y-%%m-%%d)";
 O="$BASE/$DAY";
 mkdir -p "$O" || exit 1;
 
-PART_BLOCKS="$(blockdev --getsize /dev/block/bootdevice/by-name/super 2>/dev/null)";
-set -- $(df -P "$O" 2>/dev/null | tail -n1);
-FREE_BLOCKS="$4";
-if [ -n "$PART_BLOCKS" ] && [ -n "$FREE_BLOCKS" ]; then
-if [ "$FREE_BLOCKS" -lt "$PART_BLOCKS" ]; then
-echo "Not enough free space: need $PART_BLOCKS blocks (512b), have $FREE_BLOCKS blocks (512b)";
-exit 1;
-fi;
-fi;
-
+START="$(date +%s)";
 F="$O/super_$D.img.zst";
 dd if=/dev/block/bootdevice/by-name/super bs=1M | zstd -12 -T8 -c > "$F" || exit 1;
 zstd -t "$F" || exit 1;
 if [ "%mnt_backup_method%" = "zstdpar2" ]; then
 par2turbo c -r10 -n3 "$F.par2" "$F" || exit 1;
 fi
+END="$(date +%s)";
+ELAPSED=$(( END - START ));
+set -- $(du -m "$F");
+SIZE_MB="$1";
+echo "Done: size $SIZE_MB MB, time $ELAPSED sec, file $F";
 				</action>
 			</action>
 
