@@ -169,21 +169,9 @@ TW_SUPPORT_INPUT_AIDL_HAPTICS_FQNAME := "IVibrator/default"
 #########################
 #### OrangeFox common ###
 #########################
-FOX_USE_SPECIFIC_MAGISK_ZIP=~/Magisk/Magisk-v28.1.zip
-FOX_VIRTUAL_AB_DEVICE=1
-FOX_VANILLA_BUILD=1
-FOX_ENABLE_APP_MANAGER=1
-FOX_RECOVERY_SYSTEM_PARTITION=/dev/block/mapper/system
-FOX_RECOVERY_VENDOR_PARTITION=/dev/block/mapper/vendor
-FOX_USE_BASH_SHELL=1
-FOX_ASH_IS_BASH=1
-FOX_USE_TAR_BINARY=1
-FOX_USE_LZ4_BINARY=1
-FOX_USE_SED_BINARY=1
-FOX_USE_XZ_UTILS=1
-FOX_USE_ZSTD_BINARY=1
-FOX_USE_NANO_EDITOR=1
-FOX_DELETE_AROMAFM=1
+# NOTE: per official build-vars doc, all FOX_* vars MUST be exported as
+# environment variables in vendorsetup.sh (shell) - NOT declared in .mk files.
+# All FOX_* vars therefore live in vendorsetup.sh. Only OF_* vars belong here.
 OF_DEFAULT_KEYMASTER_VERSION=4.1
 
 # screen settings
@@ -198,8 +186,9 @@ OF_CLOCK_POS=1
 OF_QUICK_BACKUP_LIST=/boot:/data
 OF_ENABLE_LPTOOLS=1
 OF_NO_TREBLE_COMPATIBILITY_CHECK=1
-FOX_USE_BASH_SHELL=1
-FOX_USE_NANO_EDITOR=1
+
+# default timezone: Moscow (no DST)
+OF_DEFAULT_TIMEZONE=MSK-3
 
 # number of list options before scrollbar creation
 OF_OPTIONS_LIST_NUM=9
